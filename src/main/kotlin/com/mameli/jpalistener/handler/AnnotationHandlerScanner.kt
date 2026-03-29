@@ -31,23 +31,23 @@ class AnnotationHandlerScanner(
                 val bean = applicationContext.getBean(beanName)
                 
                 for (method in beanClass.declaredMethods) {
-                    val onCreate = AnnotationUtils.findAnnotation(method, OnCreate::class.java)
+                    val onCreate: OnCreate? = AnnotationUtils.findAnnotation(method, OnCreate::class.java)
                     if (onCreate != null) {
-                        val entityClass = Class.forName(onCreate.entityClass)
+                        val entityClass = onCreate.entityClass.java
                         eventRegistry.registerHandler(entityClass.name, bean, method)
                         logger.info("Registered @OnCreate: ${beanClass.simpleName}.${method.name} -> ${entityClass.simpleName}")
                     }
 
-                    val onUpdate = AnnotationUtils.findAnnotation(method, OnUpdate::class.java)
+                    val onUpdate: OnUpdate? = AnnotationUtils.findAnnotation(method, OnUpdate::class.java)
                     if (onUpdate != null) {
-                        val entityClass = Class.forName(onUpdate.entityClass)
+                        val entityClass = onUpdate.entityClass.java
                         eventRegistry.registerHandler(entityClass.name, bean, method)
                         logger.info("Registered @OnUpdate: ${beanClass.simpleName}.${method.name} -> ${entityClass.simpleName}")
                     }
 
-                    val onDelete = AnnotationUtils.findAnnotation(method, OnDelete::class.java)
+                    val onDelete: OnDelete? = AnnotationUtils.findAnnotation(method, OnDelete::class.java)
                     if (onDelete != null) {
-                        val entityClass = Class.forName(onDelete.entityClass)
+                        val entityClass = onDelete.entityClass.java
                         eventRegistry.registerHandler(entityClass.name, bean, method)
                         logger.info("Registered @OnDelete: ${beanClass.simpleName}.${method.name} -> ${entityClass.simpleName}")
                     }

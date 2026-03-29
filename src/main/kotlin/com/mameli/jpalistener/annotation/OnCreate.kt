@@ -1,5 +1,7 @@
 package com.mameli.jpalistener.annotation
 
+import kotlin.reflect.KClass
+
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class OnCreate(val entityClass: String)
+annotation class OnCreate(val entityClass: KClass<*>)
