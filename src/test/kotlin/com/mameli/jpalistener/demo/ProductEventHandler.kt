@@ -7,19 +7,18 @@ import com.mameli.jpalistener.model.event.EntityCreatedEvent
 import com.mameli.jpalistener.model.event.EntityDeletedEvent
 import com.mameli.jpalistener.model.event.EntityUpdatedEvent
 import org.slf4j.LoggerFactory
-import org.springframework.stereotype.Service
+import org.springframework.stereotype.Component
 
-@Service
+@Component
 class ProductEventHandler {
-
     private val logger = LoggerFactory.getLogger(ProductEventHandler::class.java)
 
-    @OnCreate(entityClass = Product::class)
+    @OnCreate(Product::class)
     fun handleCreate(event: EntityCreatedEvent) {
         logger.info("Product created: ${(event.entity as Product).name}")
     }
 
-    @OnUpdate(entityClass = Product::class)
+    @OnUpdate(Product::class)
     fun handleUpdate(event: EntityUpdatedEvent) {
         val product = event.entity as Product
         logger.info("Product updated: ${product.name}")

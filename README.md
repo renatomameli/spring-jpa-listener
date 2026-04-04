@@ -41,19 +41,9 @@ class Product(
 )
 ```
 
-### 2. Add EntityListener to Entity
+> **Note**: The `@TrackedEntity` annotation automatically registers the entity listener with Hibernate. No additional `@EntityListeners` annotation is needed!
 
-```kotlin
-import jakarta.persistence.EntityListeners
-import jakarta.persistence.Entity
-
-@Entity
-@TrackedEntity
-@EntityListeners(TrackingEntityListener::class)
-class Product { ... }
-```
-
-### 3. Create Event Handler
+### 2. Create Event Handler
 
 ```kotlin
 import com.mameli.jpalistener.annotation.OnCreate

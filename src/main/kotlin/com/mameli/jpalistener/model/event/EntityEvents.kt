@@ -13,21 +13,21 @@ sealed class EntityEvent(
 data class EntityCreatedEvent(
     override val entityType: Class<*>,
     override val entityId: Any,
+    override val entity: Any,
     override val timestamp: Long = System.currentTimeMillis(),
-    override val entity: Any
 ) : EntityEvent(entityType, entityId, timestamp)
 
 data class EntityUpdatedEvent(
     override val entityType: Class<*>,
     override val entityId: Any,
-    override val timestamp: Long = System.currentTimeMillis(),
     override val entity: Any,
-    val changeSet: ChangeSet
+    val changeSet: ChangeSet,
+    override val timestamp: Long = System.currentTimeMillis(),
 ) : EntityEvent(entityType, entityId, timestamp)
 
 data class EntityDeletedEvent(
     override val entityType: Class<*>,
     override val entityId: Any,
+    override val entity: Any,
     override val timestamp: Long = System.currentTimeMillis(),
-    override val entity: Any
 ) : EntityEvent(entityType, entityId, timestamp)
