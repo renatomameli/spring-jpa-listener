@@ -1,5 +1,6 @@
 package com.mameli.jpalistener.listener
 
+import com.mameli.jpalistener.model.EventMode
 import com.mameli.jpalistener.model.event.EntityEvent
 import com.mameli.jpalistener.model.event.EntityUpdatedEvent
 import org.slf4j.LoggerFactory
@@ -18,11 +19,13 @@ import java.util.concurrent.ConcurrentHashMap
  * via the static [instance] singleton — this indirection is
  * necessary because Hibernate's event system has no access to Spring's dependency injection.
  *
- * **Dispatch behavior:**
- * - If a transaction is active, handlers are invoked **after commit** to ensure data consistency.
- * - If no transaction is active, handlers are invoked immediately.
+ * **Dispatch behavior** depends on the [EventMode] configured per handler:
+ * - [EventMode.AFTER_COMMIT]: Handlers are invoked **after commit** (or immediately if no
+ *   transaction is active). Exceptions are caught and logged — the transaction is never affected.
+ * - [EventMode.TRANSACTIONAL]: Handlers are invoked **synchronously inside** the active
+ *   transaction. If a handler throws, the exception propagates and the transaction is rolled back.
  * - Every event is additionally published as a Spring [ApplicationEvent], so standard
- *   `@EventListener` methods can also receive them.
+ *   `@EventListener` / `@TransactionalEventListener` methods can also receive them.
  *
  * @param applicationEventPublisher the Spring event publisher for broadcasting events
  */
@@ -46,27 +49,38 @@ class EventRegistry(private val applicationEventPublisher: ApplicationEventPubli
     private data class HandlerMethod(
         val bean: Any,
         val method: java.lang.reflect.Method,
-        val eventType: Class<out EntityEvent>
+        val eventType: Class<out EntityEvent>,
+        val mode: EventMode
     )
 
     /**
-     * Registers a handler method for a specific entity type and event type.
+     * Registers a handler method for a specific entity type, event type and dispatch mode.
      *
      * @param entityClassName fully qualified class name of the entity to listen for
      * @param bean the Spring bean instance containing the handler method
      * @param method the handler method to invoke when a matching event occurs
      * @param eventType the specific [EntityEvent] subclass this handler expects
+     * @param mode the [EventMode] controlling when the handler runs relative to the transaction
      */
-    fun registerHandler(entityClassName: String, bean: Any, method: java.lang.reflect.Method, eventType: Class<out EntityEvent>) {
-        handlerMethods.computeIfAbsent(entityClassName) { mutableListOf() }.add(HandlerMethod(bean, method, eventType))
+    fun registerHandler(
+        entityClassName: String,
+        bean: Any,
+        method: java.lang.reflect.Method,
+        eventType: Class<out EntityEvent>,
+        mode: EventMode
+    ) {
+        handlerMethods.computeIfAbsent(entityClassName) { mutableListOf() }
+            .add(HandlerMethod(bean, method, eventType, mode))
     }
 
     /**
      * Dispatches an [EntityEvent] to all registered handlers for the event's entity type
      * and publishes it as a Spring [ApplicationEvent].
      *
-     * If a transaction is active, both handler invocations and the Spring event are deferred
-     * until after the transaction commits.
+     * - **[EventMode.TRANSACTIONAL]** handlers are invoked immediately (inside the transaction).
+     *   Exceptions propagate and will cause the transaction to roll back.
+     * - **[EventMode.AFTER_COMMIT]** handlers are deferred until after the transaction commits
+     *   (or invoked immediately if no transaction is active). Exceptions are caught and logged.
      *
      * @param event the entity event to dispatch
      */
@@ -75,7 +89,11 @@ class EventRegistry(private val applicationEventPublisher: ApplicationEventPubli
 
         for (handler in handlers) {
             if (!handler.eventType.isInstance(event)) continue
-            afterCommitOrNow { invokeHandler(handler, event) }
+
+            when (handler.mode) {
+                EventMode.TRANSACTIONAL -> invokeHandlerTransactional(handler, event)
+                EventMode.AFTER_COMMIT, EventMode.UNSET -> afterCommitOrNow { invokeHandlerSafe(handler, event) }
+            }
         }
 
         applicationEventPublisher.publishEvent(event)
@@ -97,7 +115,25 @@ class EventRegistry(private val applicationEventPublisher: ApplicationEventPubli
         }
     }
 
-    private fun invokeHandler(handler: HandlerMethod, event: EntityEvent) {
+    /**
+     * Invokes the handler inside the current transaction. Exceptions are **not** caught —
+     * they propagate to the caller and will cause the transaction to roll back.
+     */
+    private fun invokeHandlerTransactional(handler: HandlerMethod, event: EntityEvent) {
+        val params = resolveParams(handler.method, event)
+        try {
+            handler.method.invoke(handler.bean, *params.toTypedArray())
+        } catch (e: java.lang.reflect.InvocationTargetException) {
+            // Unwrap the real exception so the caller sees the original cause
+            throw e.targetException
+        }
+    }
+
+    /**
+     * Invokes the handler safely — exceptions are caught and logged.
+     * Used for [EventMode.AFTER_COMMIT] handlers where the transaction has already committed.
+     */
+    private fun invokeHandlerSafe(handler: HandlerMethod, event: EntityEvent) {
         try {
             val params = resolveParams(handler.method, event)
             handler.method.invoke(handler.bean, *params.toTypedArray())

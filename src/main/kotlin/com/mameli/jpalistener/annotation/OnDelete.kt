@@ -1,5 +1,6 @@
 package com.mameli.jpalistener.annotation
 
+import com.mameli.jpalistener.model.EventMode
 import kotlin.reflect.KClass
 
 /**
@@ -23,7 +24,9 @@ import kotlin.reflect.KClass
  * ```
  *
  * @param entityClass The entity class for which to listen for deletion events
+ * @param mode Controls when the handler runs relative to the transaction.
+ *   Leave empty to use the globally configured default (`spring.jpalistener.default-mode`).
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class OnDelete(val entityClass: KClass<*>)
+annotation class OnDelete(val entityClass: KClass<*>, val mode: EventMode = EventMode.UNSET)

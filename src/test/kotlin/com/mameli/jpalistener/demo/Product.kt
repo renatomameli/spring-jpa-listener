@@ -9,7 +9,6 @@ import jakarta.persistence.Table
 import java.math.BigDecimal
 
 @Entity
-@Table(name = "product")
 @TrackedEntity
 class Product(
     @Id
