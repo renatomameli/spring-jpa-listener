@@ -161,6 +161,13 @@ class AsyncHandler {
 
 Handlers are executed after the transaction commits by default. If no transaction is active, handlers execute immediately.
 
+## DB Change Listener
+
+Uses Hibernate's `EventListener` API (`PostInsertEventListener`, `PostUpdateEventListener`, `PostDeleteEventListener`)
+to intercept all DB changes transparently — no manual calls in services or repositories needed.
+
+Entities opt in via `@TrackChanges`. The listener runs in the same transaction as the triggering operation.
+
 ## License
 
 MIT
