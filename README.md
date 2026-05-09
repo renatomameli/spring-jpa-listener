@@ -6,7 +6,7 @@ Automatic entity change detection and domain event publishing for Spring Data JP
 
 - **Detect entity lifecycle changes**: Create, Update, Delete
 - **Track field-level changes**: Get old and new values for updates
-- **Publish Spring events**: After transaction commit
+- **Two dispatch modes**: Run handlers inside the transaction or after commit
 - **Flexible event handlers**: Use annotations to define handlers
 
 ## Installation
@@ -52,9 +52,9 @@ import com.mameli.jpalistener.annotation.OnDelete
 import com.mameli.jpalistener.model.event.EntityCreatedEvent
 import com.mameli.jpalistener.model.event.EntityUpdatedEvent
 import com.mameli.jpalistener.model.event.EntityDeletedEvent
-import org.springframework.stereotype.Service
+import org.springframework.stereotype.Component
 
-@Service
+@Component
 class ProductEventHandler {
 
     @OnCreate(entityClass = Product::class)
@@ -159,14 +159,38 @@ class AsyncHandler {
 
 ## Transaction Handling
 
-Handlers are executed after the transaction commits by default. If no transaction is active, handlers execute immediately.
+Each handler can be configured with one of two dispatch modes via the `mode` parameter:
 
-## DB Change Listener
+| Mode | Timing | Exception → Rollback | Use case |
+|------|--------|----------------------|----------|
+| `AFTER_COMMIT` (default) | After the DB transaction commits | ❌ Exception is logged, DB stays saved | Logging, notifications, cache eviction, async side-effects |
+| `TRANSACTIONAL` | Inside the active transaction | ✅ Exception propagates, transaction rolls back | Atomic side-effects, write to another table, enforce business rules |
+
+**Default mode**: `AFTER_COMMIT`. You can change the global default in `application.yml`:
+
+```yaml
+spring:
+  jpalistener:
+    default-mode: TRANSACTIONAL
+```
+
+**Per-handler override**:
+
+```kotlin
+@OnCreate(entityClass = Product::class, mode = EventMode.TRANSACTIONAL)
+fun handle(event: EntityCreatedEvent) { ... }
+```
+
+**No active transaction**: If no transaction is running, both modes execute immediately.
+
+## How it works
 
 Uses Hibernate's `EventListener` API (`PostInsertEventListener`, `PostUpdateEventListener`, `PostDeleteEventListener`)
 to intercept all DB changes transparently — no manual calls in services or repositories needed.
 
-Entities opt in via `@TrackChanges`. The listener runs in the same transaction as the triggering operation.
+Entities opt in via `@TrackedEntity`. The Hibernate listeners detect changes during the Hibernate flush cycle,
+which always runs inside the active transaction. The event dispatch to your handler methods then follows
+the configured `EventMode` (see [Transaction Handling](#transaction-handling)).
 
 ## License
 

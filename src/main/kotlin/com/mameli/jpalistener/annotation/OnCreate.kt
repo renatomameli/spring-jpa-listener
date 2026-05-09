@@ -21,8 +21,7 @@ import kotlin.reflect.KClass
  * ```
  *
  * @param entityClass The entity class for which to listen for creation events
- * @param mode Controls when the handler runs relative to the transaction.
- *   Leave empty to use the globally configured default (`spring.jpalistener.default-mode`).
+ * @param mode Controls when the handler runs (see [EventMode]). Defaults to `spring.jpalistener.default-mode`.
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
