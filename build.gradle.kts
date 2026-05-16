@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm") version "2.3.10"
-    `maven-publish`
+    id("com.vanniktech.maven.publish") version "0.31.0"
 }
 
 group = "com.mameli"
@@ -42,14 +42,35 @@ tasks.test {
     useJUnitPlatform()
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-            pom {
-                name.set("Spring JPA Listener")
-                description.set("Automatic entity change detection and domain events for Spring Data JPA")
+mavenPublishing {
+    publishToMavenCentral(automaticRelease = true)
+    signAllPublications()
+    coordinates(group.toString(), rootProject.name, version.toString())
+    pom {
+        name = "Spring JPA Listener"
+        description = "Automatic entity change detection and domain events for Spring Data JPA"
+        inceptionYear = "2026"
+        url = "https://github.com/renatomameli/spring-jpa-listener"
+        licenses {
+            license {
+                name = "MIT License"
+                url = "https://opensource.org/licenses/MIT"
             }
+        }
+        developers {
+            developer {
+                id = "renatomameli"
+                name = "Renato Mameli"
+                url = "https://github.com/renatomameli"
+                email = "renatomamel410@gmail.com"
+                organization = "renatomameli"
+                organizationUrl = "https://github.com/renatomameli"
+            }
+        }
+        scm {
+            url = "https://github.com/renatomameli/spring-jpa-listener"
+            connection = "scm:git:git://github.com/renatomameli/spring-jpa-listener.git"
+            developerConnection = "scm:git:ssh://git@github.com/renatomameli/spring-jpa-listener.git"
         }
     }
 }
