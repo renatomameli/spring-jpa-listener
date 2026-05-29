@@ -18,7 +18,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.mameli:spring-jpa-listener:1.0.0")
+    implementation("io.github.renatomameli:spring-jpa-listener:1.0.0")
 }
 ```
 
@@ -191,6 +191,70 @@ to intercept all DB changes transparently — no manual calls in services or rep
 Entities opt in via `@TrackedEntity`. The Hibernate listeners detect changes during the Hibernate flush cycle,
 which always runs inside the active transaction. The event dispatch to your handler methods then follows
 the configured `EventMode` (see [Transaction Handling](#transaction-handling)).
+
+## Publishing
+
+This library is configured for Maven Central via the Sonatype Central Portal.
+
+Coordinates:
+
+```text
+io.github.renatomameli:spring-jpa-listener:1.0.0
+```
+
+For local releases, copy the example file and fill in your secrets:
+
+```bash
+cp maven-central-publish.properties.example maven-central-publish.properties
+```
+
+`maven-central-publish.properties` is ignored by git and should contain:
+
+```properties
+mavenCentralUsername=...
+mavenCentralPassword=...
+signingInMemoryKey=-----BEGIN PGP PRIVATE KEY BLOCK-----\n...\n-----END PGP PRIVATE KEY BLOCK-----
+```
+
+Export the key with escaped newlines while preserving blank lines:
+
+```bash
+gpg --armor --export-secret-keys YOUR_KEY_ID | awk '{sub(/\r$/, ""); printf "%s\\n", $0;}'
+```
+
+Do not use an export command that filters blank lines, because the ASCII-armor blank line after
+`-----BEGIN PGP PRIVATE KEY BLOCK-----` is required by Gradle's PGP parser.
+
+Do not store the GPG passphrase in the file. For local releases, use the wrapper script instead:
+
+```bash
+./scripts/publish-maven-central.zsh
+```
+
+The script asks for the GPG passphrase without echoing it and passes it only to the Gradle process.
+
+CI can alternatively provide the same keys as Gradle properties or environment-backed Gradle properties.
+
+Manual release flow without the wrapper script:
+
+```bash
+read -rs "GPG_PASSPHRASE?GPG passphrase: "
+echo
+ORG_GRADLE_PROJECT_mavenCentralUsername="..." \
+ORG_GRADLE_PROJECT_mavenCentralPassword="..." \
+ORG_GRADLE_PROJECT_signingInMemoryKey="..." \
+ORG_GRADLE_PROJECT_signingInMemoryKeyPassword="$GPG_PASSPHRASE" \
+./gradlew checkSigningConfiguration clean build publishToMavenCentral
+unset GPG_PASSPHRASE
+```
+
+Basic verification flow:
+
+```bash
+./gradlew clean build
+```
+
+The build uses `automaticRelease = false`, so the uploaded deployment can be reviewed and released manually in the Central Portal.
 
 ## License
 

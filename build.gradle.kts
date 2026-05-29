@@ -1,10 +1,25 @@
+import com.vanniktech.maven.publish.SonatypeHost
+import java.util.Properties
+
 plugins {
     kotlin("jvm") version "2.3.10"
     id("com.vanniktech.maven.publish") version "0.31.0"
 }
 
-group = "com.mameli"
+group = "io.github.renatomameli"
 version = "1.0.0"
+
+val localPublishPropertiesFile: File = rootProject.file("maven-central-publish.properties")
+if (localPublishPropertiesFile.isFile) {
+    Properties().apply {
+        localPublishPropertiesFile.inputStream().use(::load)
+    }.forEach { (key, value) ->
+        val propertyName = key.toString()
+        if (!project.hasProperty(propertyName)) {
+            extensions.extraProperties[propertyName] = value.toString()
+        }
+    }
+}
 
 repositories {
     mavenCentral()
@@ -43,7 +58,10 @@ tasks.test {
 }
 
 mavenPublishing {
-    publishToMavenCentral(automaticRelease = true)
+    publishToMavenCentral(
+        host = SonatypeHost.CENTRAL_PORTAL,
+        automaticRelease = false
+    )
     signAllPublications()
     coordinates(group.toString(), rootProject.name, version.toString())
     pom {
